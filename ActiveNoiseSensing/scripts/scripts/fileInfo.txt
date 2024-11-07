@@ -1,9 +1,0 @@
-DataProcessing: Store h5py file into training dataset locally as npy files (vectorization is done here)
-TrainModel: Read the data files and start training
-SampleTest:Test the model on the test data
-RawScripts: function/code testing
-SampleTest 2-1: test the 2 noise channel map to 1 MRI channel model
-trainModel3D: Read data files and train the 3d K space model
-SampleTest3D: test the 3d k space model
-TM_HP: a long run for optimal hyper parameter searching
-spectrumAnalysis: Quick spectrum analysis of the data
