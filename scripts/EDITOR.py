@@ -51,28 +51,27 @@ def transferFlattenSingle(noiseSignal, MRISignal):
     transfer = np.dot(mri,np.linalg.pinv(noise))
     return transfer
 
+noise = 'C:/Active_Noise_Sensing/EMINoise/0827/NoiseSignal_32_256.h5'
+img = 'C:/Active_Noise_Sensing/EMINoise/0827/NoisyImg.h5'
+baseline = 'C:/Active_Noise_Sensing/EMINoise/0827/BaselineImg.h5'
+
 # Load Data
 # noise channel from noise only scans
-signal,b = common.readAllAcqs('C:/Active_Noise_Sensing/EMINoise/0827/NoiseSignal_32_256.h5')
+signal,b = common.readAllAcqs(noise)
 noiseSignal = signal[:,16:18,:]
 
 # MRI channel from noise only scans
 MRISignal = signal[:,0:16,:]
 
-signal2,b = common.readAllAcqs('C:/Active_Noise_Sensing/EMINoise/0827/0Flip.h5')
-noiseSignal2 = signal2[:,16:18,:]
-
-# MRI channel from noise only scans
-MRISignal2 = signal2[:,0:16,:]
 
 
 # Noise channel from  Noisy MRI scans
-noisyImg,b = common.readAllAcqs('C:/Active_Noise_Sensing/EMINoise/0827/NoisyImg.h5')
+noisyImg,b = common.readAllAcqs(img)
 imageNoise = noisyImg[:,16:18,:]
 # Noisy Image, image channel from MRI scans
 image = noisyImg[:,0:16,:]
 # baseline Image
-baseline,b = common.readAllAcqs('C:/Active_Noise_Sensing/EMINoise/0827/BaselineImg.h5')
+baseline,b = common.readAllAcqs(baseline)
 baseline = baseline[:,0:16,:]
 #(16,2)*(2,512) = (16,512)
 # (16,512)*(512,2) = (16,2)
@@ -100,10 +99,10 @@ cleaned = image - pred
 mse = np.mean(np.square(cleaned - baseline))
 print("Mean square Error on sample Image:", mse)
 
-BaselineImage = common.toImg(common.toKSpace(baseline,'C:/Active_Noise_Sensing/EMINoise/0827/BaselineImg.h5'))
-NoiseImage = common.toImg(common.toKSpace(image,'C:/Active_Noise_Sensing/EMINoise/0827/NoisyImg.h5'))
-CleanImage = common.toImg(common.toKSpace(cleaned,'C:/Active_Noise_Sensing/EMINoise/0827/NoisyImg.h5'))
-NoiseMap = common.toImg(common.toKSpace(pred,'C:/Active_Noise_Sensing/EMINoise/0827/NoisyImg.h5'))
+BaselineImage = common.toImg(common.toKSpace(baseline,img))
+NoiseImage = common.toImg(common.toKSpace(image,img))
+CleanImage = common.toImg(common.toKSpace(cleaned,img))
+NoiseMap = common.toImg(common.toKSpace(pred,img))
 
 tt.storePrediction('C:/Active_Noise_Sensing/EMINoise/0827/','NoisyImg',cleaned)
 
