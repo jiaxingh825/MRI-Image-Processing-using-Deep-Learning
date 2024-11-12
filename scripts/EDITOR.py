@@ -9,19 +9,6 @@ import DataProcessing as dp
 import common
 import TrainAndTest as tt
 
-def readSignal(fileName,l,dataType = "data"):
-    f = h5py.File(fileName)
-    volGroup = list(f[dataType].keys())
-    sigList = list(f[dataType][volGroup[0]].keys())
-    count = len(sigList)
-    sig = np.array(f[dataType][volGroup[0]][sigList[0]])[:16,]
-    noise = np.array(f[dataType][volGroup[0]][sigList[0]])[-2:,]
-
-    for i in range(1, count-1):
-        np.append(sig,np.array(f[dataType][volGroup[0]][sigList[i]])[:16,],axis=1)
-        np.append(noise,np.array(f[dataType][volGroup[0]][sigList[i]])[-2:,],axis=1)
-    return sig,noise
-
 def transferAveraging(noiseSignal, MRISignal):
     transfer = np.zeros((16,2),dtype= np.complex64)
     sum  = np.zeros((16,2),dtype= np.complex64)
@@ -99,10 +86,10 @@ cleaned = image - pred
 mse = np.mean(np.square(cleaned - baseline))
 print("Mean square Error on sample Image:", mse)
 
-BaselineImage = common.toImg(common.toKSpace(baseline,img))
-NoiseImage = common.toImg(common.toKSpace(image,img))
-CleanImage = common.toImg(common.toKSpace(cleaned,img))
-NoiseMap = common.toImg(common.toKSpace(pred,img))
+BaselineImage = dp.toImg(dp.toKSpace(baseline,img))
+NoiseImage = dp.toImg(dp.toKSpace(image,img))
+CleanImage = dp.toImg(dp.toKSpace(cleaned,img))
+NoiseMap = dp.toImg(dp.toKSpace(pred,img))
 
 tt.storePrediction('C:/Active_Noise_Sensing/EMINoise/0827/','NoisyImg',cleaned)
 

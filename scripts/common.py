@@ -228,44 +228,6 @@ def PlotSlices(sos, min=None, max=None):
     else:
         raise ValueError("Input sos must be 2D or 3D")
     
-# Convert data into 4-D K space
-def toKSpace(allData,fname, table_name="acq", datasrc="data"):
-    fh = h5py.File(fname, "r")
-    desc = getDataDescriptions(fh, table_name)
-    fh.close()
-    nSlices = int(desc["slice"].max()+1)
-    ny = int(desc["phase"].max()+1)
-    nx = allData.shape[2]
-    nChannels = allData.shape[1]
- 
-    #allociate space for kSpace data
-    kSpace = np.zeros((nx,ny,nSlices,nChannels),dtype=np.complex64)
-    #loop through slices and phase encodes put data into kSpace array
-    for sliceIndex in range(nSlices):
-        sliceDesc = desc.loc[desc.slice==sliceIndex]
-        for ind in sliceDesc.index:
-            phaseIndex = int(sliceDesc['phase'][ind])
-            kSpace[:,phaseIndex,sliceIndex,:]=np.transpose(allData[ind,:,:],[1,0])
-    
-    return kSpace
 
-# Convert 4D K Space into image space and combine 16 channels
-def toImg(kSpace):
-    im = f2d(kSpace,axes=[0,1])
-    #Simple Sum of Square Channel Combinations
-    sos = np.sum(np.power(np.abs(im),2),axis=im.ndim-1)
-    return sos
 
-def storePrediction(fname,corrected):
-    destination_file = 'E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/0816'
-
-    # use the shutil.copyobj() method to copy the contents of source_file to destination_file
-    shutil.copy(fname, destination_file)
-    f1 = h5py.File(fname, 'r+')     # open the file
-    desc = getDataDescriptions(f1, table_name='acq')
-    for i, row in desc.iterrows():
-        data_string = "{:016x}".format(int(row.uid))
-        data = f1['data'+data_string]       # load the data
-        data[...] = corrected[i]                      # assign new values to data
-    f1.close() 
 

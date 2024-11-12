@@ -10,6 +10,8 @@ bs = 16
 epoch_num = 400
 lr = 0.0002
 
+# 5 layer U-net CNN
+# Input: N - number of points in each channel
 def get_model(N):
     input = tf.keras.Input(shape = (2,N,2))
     x = tfl.Conv2D(128, (3,3), strides=1, padding='same')(input)

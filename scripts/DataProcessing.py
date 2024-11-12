@@ -5,14 +5,24 @@ import json
 import common
 import os
 
+# extract all file_paths in a folder
+# Inputs: 
+#       folder_path: the target folder path
+# Outputs:
+#       filepaths: an array of string which store all folderpaths
 def get_filepaths(folder_path):
     filepaths = []
-    for root, dirs, files in os.walk(folder_path):
+    for root, files in os.walk(folder_path):
         for file in files:
             filepath = os.path.join(root, file)
             filepaths.append(filepath)
     return filepaths
 
+# Re-arrange the data by doubling the channel size for splitting read/imagery parts
+# Inputs: 
+#       data: input dataset in shape (number of samples,number of channels, number of data points)
+# Outputs:
+#       newData: rearranged dataset in shape (number of samples, 2*number of channels, number of data points)
 def SplitComplex(data):
     numPoints = int(data.shape[2])
     numChannels = data.shape[1]
@@ -23,39 +33,35 @@ def SplitComplex(data):
             newData[:,2*i+1,j] = data[:,i,2*j+1]
     return newData
 
-
+# Re-arrange the data by adding extra dimension for splitting read/imagery parts
+# Inputs: 
+#       data: input dataset in shape (number of samples,number of channels, number of data points)
+# Outputs:
+#        newData: rearranged dataset in shape (number of samples, 2, number of channels, number of data points)
 def SplitComplexR(data):
     numPoints = int(data.shape[2])
-    numChannels = data.shape[3]
+    numChannels = data.shape[1]
+    new = np.transpose(np.expand_dims(data,3),(0,3,2,1))
     newData = np.zeros((data.shape[0],2,numPoints//2,numChannels))
     for j in range(numPoints//2):
         newData[:,0,j] = data[:,0,2*j]
         newData[:,1,j] = data[:,0,2*j+1]
     return newData
 
-# double the size of channels and half the number of x-axis points to separate the real and imaginary part
-# Input data is a 4-D K-Space data
-def SplitComplex3D(data):
-    numPoints = int(data.shape[3])
-    numChannels = data.shape[2]
-    newData = np.zeros((data.shape[0],data.shape[1],2*numChannels,numPoints//2))
-    for i in range(0,numChannels):
-        for j in range(0,numPoints//2):
-            newData[:,:,2*i,j] = data[:,:,i,2*j]
-            newData[:,:,2*i+1,j] = data[:,:,i,2*j+1]
-    return newData
-
-
-
+# Process MRI recordings into npy file for training and validating active noise sensing model. 
+# Testing files are generated based on the whole data file if it is not specified otherwise
+# Inputs: 
+#       noise: Path of MRI Image raw data file with noise
+#       baseline: Path of MRI baseline Image raw data
+#       date: the collecting date of the data 
+#       testNoise: Path of a separated MRI Image raw data file with noise for testing 
+# Outputs:
+#        newData: rearranged dataset in shape (number of samples, 2, number of channels, number of data points)
 def processFullMRIFileR(noise,baseline,date,testNoise=None):
     baseline,a = common.readAllAcqs(baseline)
     sample,b = common.readAllAcqs(noise)
     sig1 = sample[:,:16,:]-baseline[:,:16,:]
     noise1 = sample[:,16:18,:]
-    sig1 = np.expand_dims(sig1,3)
-    sig1 = np.transpose(sig1,(0,3,2,1))
-    noise1 = np.expand_dims(noise1,3)
-    noise1 = np.transpose(noise1,(0,3,2,1))
     l = sig1.shape[0]
     l1 = int(l*0.8)
     sigTrain = SplitComplexR(sig1[0:l1])
@@ -64,8 +70,6 @@ def processFullMRIFileR(noise,baseline,date,testNoise=None):
     noiseVal = SplitComplexR(noise1[l1:l])
     sigTest = SplitComplexR(sig1)
     noiseTest = SplitComplexR(noise1)
-    #np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sig0731S.npy',sigTest)
-    #np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noise0731S.npy',noiseTest)
     np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigTraining.npy',sigTrain)
     np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseTraining.npy',noiseTrain)
     np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigVal.npy',sigVal)
@@ -74,88 +78,80 @@ def processFullMRIFileR(noise,baseline,date,testNoise=None):
         test,c = common.readAllAcqs(testNoise)
         sigT = test[:,:16,:]
         noiseT = test[:,16:18,:]
-        sigT = np.expand_dims(sigT,3)
-        sigT = np.transpose(sigT,(0,3,2,1))
-        noiseT = np.expand_dims(noiseT,3)
-        noiseT = np.transpose(noiseT,(0,3,2,1))
         sigTest = SplitComplexR(sigT)
         noiseTest = SplitComplexR(noiseT)
         np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigTest.npy',sigTest)
-        np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseTest.npy',noiseTest)    
+        np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseTest.npy',noiseTest)
+    else:
+        np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigTest.npy',sigTest)
+        np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseTest.npy',noiseTest)   
     return(sigTrain,noiseTrain,sigVal,noiseVal,sigTest,noiseTest)
 
-
+# Process MRI recordings into npy file for training and validating active noise sensing model. 
+# Testing files are generated based on the whole data file if it is not specified otherwise
+# Inputs: 
+#       noise: Path of MRI Image raw data file with noise
+#       baseline: Path of MRI baseline Image raw data
+#       date: the collecting date of the data 
+#       testNoise: Path of a separated MRI Image raw data file with noise for testing 
+# Outputs:
+#        newData: rearranged dataset in shape (number of samples, 2, number of channels, number of data points)
 def processFullMRIFileRFA0(noise, date, testNoise=None):
     sample,b = common.readAllAcqs(noise)
     sig1 = sample[:,:16,:]
     noise1 = sample[:,16:18,:]
-    sig1 = np.expand_dims(sig1,3)
-    sig1 = np.transpose(sig1,(0,3,2,1))
-    noise1 = np.expand_dims(noise1,3)
-    noise1 = np.transpose(noise1,(0,3,2,1))
     l = sig1.shape[0]
     l1 = int(l*0.8)
-    l2 = int(l*0.8)
     sigTrain = SplitComplexR(sig1[0:l1])
     noiseTrain = SplitComplexR(noise1[0:l1])
     sigVal = SplitComplexR(sig1[l1:l])
     noiseVal = SplitComplexR(noise1[l1:l])
     sigTest = SplitComplexR(sig1)
     noiseTest = SplitComplexR(noise1)
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigTrainingFA0.npy',SplitComplexR(sig1[0:l1]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseTrainingFA0.npy',SplitComplexR(noise1[0:l1]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigValFA0.npy',SplitComplexR(sig1[l1:l]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseValFA0.npy',SplitComplexR(noise1[l1:l]))
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigTrainingFA0.npy',sigTrain)
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseTrainingFA0.npy',noiseTrain)
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigValFA0.npy',sigVal)
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseValFA0.npy',noiseVal)
     if testNoise != None :
         test,c = common.readAllAcqs(testNoise)
         sigT = test[:,:16,:]
         noiseT = test[:,16:18,:]
-        sigT = np.expand_dims(sigT,3)
-        sigT = np.transpose(sigT,(0,3,2,1))
-        noiseT = np.expand_dims(noiseT,3)
-        noiseT = np.transpose(noiseT,(0,3,2,1))
-        np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigTest.npy',SplitComplexR(sigT))
-        np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseTest.npy',SplitComplexR(noiseT))    
+        sigTest = SplitComplexR(sigT)
+        noiseTest = SplitComplexR(noiseT)
+        np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigTest.npy',sigTest)
+        np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseTest.npy',noiseTest)    
+    else:
+        np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/sigTest.npy',sigTest)
+        np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/reshape/'+date+'/noiseTest.npy',noiseTest)
     return(sigTrain,noiseTrain,sigVal,noiseVal,sigTest,noiseTest)
-    
-def directDSPR(noise,baseline):
+
+# Process MRI recordings into npy file for training and validating direct clean signal predicting model. 
+# Testing files are generated based on the whole data file if it is not specified otherwise
+# Inputs: 
+#       noise: Path of MRI Image raw data file with noise
+#       baseline: Path of MRI baseline Image raw data
+#       date: the collecting date of the data 
+#       testNoise: Path of a separated MRI Image raw data file with noise for testing 
+# Outputs:
+#        newData: rearranged dataset in shape (number of samples, 2, number of channels, number of data points)
+def directDSPR(noise,baseline,date):
     baseline,a = common.readAllAcqs(baseline)
     baseline = baseline[:,0:16]
     sample,b = common.readAllAcqs(noise)
-    sample = np.expand_dims(sample,3)
-    sample = np.transpose(sample,(0,3,2,1))
-    baseline = np.expand_dims(baseline,3)
-    baseline = np.transpose(baseline,(0,3,2,1))
     l = sample.shape[0]
     l1 = int(l*0.6)
     l2 = int(l*0.8)
-    
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/sig0716S.npy',SplitComplexR(baseline[0:l]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/noise0716S.npy',SplitComplexR(sample[0:l]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/sigTraining0716S.npy',SplitComplexR(baseline[0:l1]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/noiseTraining0716S.npy',SplitComplexR(sample[0:l1]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/sigVal0716S.npy',SplitComplexR(baseline[l1:l2]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/noiseVal0716S.npy',SplitComplexR(sample[l1:l2]))
-    #np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/sigTest0716S.npy',SplitComplexR(baseline[l2:l]))
-    #np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/noiseTest0716S.npy',SplitComplexR(sample[l2:l]))
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/'+date+'/sig.npy',SplitComplexR(baseline[0:l]))
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/'+date+'/noise.npy',SplitComplexR(sample[0:l]))
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/'+date+'/sigTraining.npy',SplitComplexR(baseline[0:l1]))
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/'+date+'/noiseTraining.npy',SplitComplexR(sample[0:l1]))
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/'+date+'/sigVal.npy',SplitComplexR(baseline[l1:l2]))
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/'+date+'/noiseVal.npy',SplitComplexR(sample[l1:l2]))
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/'+date+'/sigTest.npy',SplitComplexR(baseline[l2:l]))
+    np.save('E:/JiaxingData/ActiveNoiseSensingModel/data/dsp/'+date+'/noiseTest.npy',SplitComplexR(sample[l2:l]))
 
-# Prepare the data for model training
-# the input files are noise with image recordings in format (nx,ny,nSlices,nChannels)
-# The output data are in 4D k space format (nSlices,ny,nchannels,nx)
-# Before running this function, knock off ".view(np.complex64)" in common.readDataByUID
-def storeKSpace(noise,baseline):
-    baseline = common.getKspace(baseline)
-    sample = common.getKspace(noise)
-    sig1 = np.transpose((sample[:,:,:,:16]-baseline[:,:,:,:16]),(2,1,3,0))
-    noise1 = np.transpose(sample[:,:,:,16:18],(2,1,3,0))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/imgKSpace/sigTrainingS.npy',SplitComplex3D(sig1[0:6]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/imgKSpace/noiseTrainingS.npy',SplitComplex3D(noise1[0:6]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/imgKSpace/sigValS.npy',SplitComplex3D(sig1[6:8]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/imgKSpace/noiseValS.npy',SplitComplex3D(noise1[6:8]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/imgKSpace/sigTestS.npy',SplitComplex3D(sig1[8:10]))
-    np.save('E:/JiaxingData/ActiveNoiseSensingModel/imgKSpace/noiseTestS.npy',SplitComplex3D(noise1[8:10]))
 
-# Prepare the data for model training
+# Prepare the data for model training from raw data with simple reconstruction
 # Inputs: 
 #       noise/baselineFolder: folderpath of the folder that contains the noise (low resolution) and baseline (high resolution) files
 #       subset: determine if the image is sperated into sub images to enlarge the data size
@@ -189,7 +185,8 @@ def processingImage(noiseFolder,baselineFolder,subset = False, subWidth=0, subHe
 # Inputs: 
 #       images:Original Images 
 #       subsetWidth/subsetHeight: height and width of the subimage 
-# Output: image subsets        
+# Output: 
+#       newImages: Image subsets        
 def subImageSet(images, subsetWidth,subsetHeight):
     size = images.shape
     newImages = []
@@ -204,22 +201,39 @@ def subImageSet(images, subsetWidth,subsetHeight):
     
     return newImages
 
-#Define path of the data file
-noise = 'E:/JiaxingData/EMINoise/0827/0Flip.h5' #'E:/JiaxingData/EMINoise/0716/FlashNoiseRaw.h5',16/SubjRawNoisy
-test = 'E:/JiaxingData/EMINoise/0827/NoisyImg.h5'
-baseline = 'E:/JiaxingData/EMINoise/0827/BaselineImg.h5' #'E:/JiaxingData/EMINoise/0716/FlashBaselineRaw.h5', SubjRawBaseline
-#E:/JiaxingData/EMINoise/0731/Baseline32_256.h5 E:/JiaxingData/EMINoise/0731/Baseline16_128.h5 E:/JiaxingData/EMINoise/0731/Baseline32_128.h5
-#E:/JiaxingData/EMINoise/0731/Noise16_128_1.h5 E:/JiaxingData/EMINoise/0731/Noise32_128_1.h5 E:/JiaxingData/EMINoise/0731/Noise32_256_1.h5
-#E:/JiaxingData/EMINoise/0731/sub/baseline.h5
-#E:/JiaxingData/EMINoise/0731/sub/run1.h5
+# Convert current dataset into 2d k space signal 
+# Inputs: 
+#       allData: Provided data with shape (number of samples, number of channels, number of points) in complex64 format
+#       fname: Path of corresponding h5py file to reconstrut 2d k space in the correct order
+# Outputs:
+#        kSpace: An stack of 2d k space slices
+def toKSpace(allData,fname):
+    fh = h5py.File(fname, "r")
+    desc = common.getDataDescriptions(fh, "acq")
+    fh.close()
+    nSlices = int(desc["slice"].max()+1)
+    ny = int(desc["phase"].max()+1)
+    nx = allData.shape[2]
+    nChannels = allData.shape[1]
+ 
+    #allociate space for kSpace data
+    kSpace = np.zeros((nx,ny,nSlices,nChannels),dtype=np.complex64)
+    #loop through slices and phase encodes put data into kSpace array
+    for sliceIndex in range(nSlices):
+        sliceDesc = desc.loc[desc.slice==sliceIndex]
+        for ind in sliceDesc.index:
+            phaseIndex = int(sliceDesc['phase'][ind])
+            kSpace[:,phaseIndex,sliceIndex,:]=np.transpose(allData[ind,:,:],[1,0])
+    
+    return kSpace
 
-#processSignalFile(noise,baseline)
-
-#processImgFile(noise,baseline)
-
-#processFullMRIFileR(test,baseline)
-              
-#directDSPR(noise,baseline)
-
-#storeKSpace(noise,baseline)
-
+# Convert current 2d k space signal stacks into image stacks
+# Inputs: 
+#       kSpace: Input 2d k space array
+# Outputs:
+#        sos: reconstructed img stacks
+def toImg(kSpace):
+    im = common.f2d(kSpace,axes=[0,1])
+    #Simple Sum of Square Channel Combinations
+    sos = np.sum(np.power(np.abs(im),2),axis=im.ndim-1)
+    return sos

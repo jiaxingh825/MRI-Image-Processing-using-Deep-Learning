@@ -5,6 +5,7 @@ DataProcessing: Store h5py file into training dataset locally as npy files (vect
 pipeline: the general pipeline for data extracting from h5py, model training, and testing
 RawScripts: funcion and logic testing space
 spectrumAnalysis: Quick spectrum analysis of the data
+TrainModel: Model structure
 
 
 

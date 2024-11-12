@@ -14,22 +14,39 @@ from tensorflow.keras.optimizers import Adam
 from keras.metrics import RootMeanSquaredError
 
 
-#Algorithm for learning rate deacy
+# Learning Rate deacy algorithm 
+# Inputs: 
+#       lr: learning_rate
+#       epoch: epoch number
+# Outputs:
+#        the updated learning rate
 def lrDeacy(lr,epoch):
     return tf.keras.callbacks.LearningRateScheduler(lr*0.9**(epoch//4))
 
-# learning rate uodate callback
+# Learning Rate updating scheduler
+# Inputs: 
+# Outputs:
+#        Learning Rate updating scheduler
 def learningRateUpdate():
     return tf.keras.callbacks.LearningRateScheduler(lrDeacy)
 
 
-# early stopping callback, stop the training if the validation loss stop redcuing
-ESC = tf.keras.callbacks.EarlyStopping(
-    monitor='val_loss',   # Metric to be monitored
-    patience=5,           # Number of epochs to wait for improvement
-    restore_best_weights=True # Restore model weights from the epoch with the best value of the monitored metric
-)
+# Early stopping callback, stop the training if the validation loss stop redcuing
+# Inputs: 
+# Outputs:
+#        Early stopping scheduler
+def earlyStopUpdate():
+    ESC = tf.keras.callbacks.EarlyStopping(
+        monitor='val_loss',   # Metric to be monitored
+        patience=5,           # Number of epochs to wait for improvement
+        restore_best_weights=True # Restore model weights from the epoch with the best value of the monitored metric
+    )
+    return ESC
 
+# Early stopping callback, stop the training if the validation loss stop redcuing
+# Inputs: 
+# Outputs:
+#        Early stopping scheduler
 def plotHist(name, hist,date,modelName):
     hist = hist.history[name]
     epochs = range(1,len(hist)+1)
@@ -41,38 +58,12 @@ def plotHist(name, hist,date,modelName):
     plt.show()
 
 
-
-
-# Convert data into 4-D K space
-def toKSpace(allData,fname, table_name="acq", datasrc="data"):
-    fh = h5py.File(fname, "r")
-    desc = common.getDataDescriptions(fh, table_name)
-    fh.close()
-    nSlices = int(desc["slice"].max()+1)
-    ny = int(desc["phase"].max()+1)
-    nx = allData.shape[2]
-    nChannels = allData.shape[1]
- 
-    #allociate space for kSpace data
-    kSpace = np.zeros((nx,ny,nSlices,nChannels),dtype=np.complex64)
-    #loop through slices and phase encodes put data into kSpace array
-    for sliceIndex in range(nSlices):
-        sliceDesc = desc.loc[desc.slice==sliceIndex]
-        for ind in sliceDesc.index:
-            phaseIndex = int(sliceDesc['phase'][ind])
-            kSpace[:,phaseIndex,sliceIndex,:]=np.transpose(allData[ind,:,:],[1,0])
-    
-    return kSpace
-
-# Convert 4D K Space into image space and combine 16 channels
-def toImg(kSpace):
-    im = common.f2d(kSpace,axes=[0,1])
-    #Simple Sum of Square Channel Combinations
-    sos = np.sum(np.power(np.abs(im),2),axis=im.ndim-1)
-    return sos
-
-# Reverse the process of splitComplex
+# Reverse the process of 'dataProcessing.splitComplex'
 # Reconstruct the data by put the coressponding imaginary part next to the real part
+# Inputs: 
+#       data: data that is processed by 'splitComplex' with shape (number of samples, 2*number of channels, number of data points)
+# Outputs:
+#        newData: Re-arranged data
 def ConvergeComplex(data):
     numPoints = int(data.shape[2])
     numChannels = int(data.shape[1])
@@ -82,6 +73,12 @@ def ConvergeComplex(data):
             newData[:,i,k] = data[:,2*i,k]+data[:,2*i+1,k]*1j
     return newData
 
+# Reverse the process of 'dataProcessing.splitComplexR'
+# Reconstruct the data by put the coressponding imaginary part next to the real part
+# Inputs: 
+#       data: data that is processed by 'splitComplexR' with shape (number of samples, 2, number of channels, number of data points)
+# Outputs:
+#        newData: Re-arranged data
 def ConvergeComplexR(data):
     numPoints = int(data.shape[2])
     numChannels = int(data.shape[3])
@@ -92,10 +89,20 @@ def ConvergeComplexR(data):
     return np.transpose(newData,(0,2,1))
 
 # Return the max-min normalization of the data
+# Inputs: 
+#       data
+# Outputs:
+#       normalized data
 def normalized(data):
     return (data-np.min(data))/(np.max(data)-np.min(data))
 
-# plot the data in the frequency domain 
+# plot the data in the frequency domain with baseline, noisy (original), and cleaned as comparsion for all channels 
+# Inputs: 
+#       corrected: cleaned data fft
+#       sampleMRI: noisy data ftt
+#       baseline: baseline data fft
+#       date: date of recording of the given data
+
 def plotFFTComparsion(corrected,sampleMRI,baseline,date):
     fig,axs = plt.subplots(4,3)
     axs = axs.flatten()
@@ -115,7 +122,12 @@ def plotFFTComparsion(corrected,sampleMRI,baseline,date):
             axs[i].show()
     plt.savefig(f'E:/JiaxingData/ActiveNoiseSensingModel/ImgResults/'+date+'/FFT_Comparsions.png')
             
-#plot the test samples in image and k space
+# plot samples of baseline, original, and noisy image with their k space image
+# Inputs: 
+#       corrected: cleaned data fft
+#       sampleMRI: noisy data ftt
+#       baseline: baseline data fft
+#       date: date of recording of the given data
 def plotSamples(CleanImage,NoiseImage,baselineImage,date):
     fig,axs = plt.subplots(4,3)
     axs = axs.flatten()
@@ -156,8 +168,14 @@ def plotSamples(CleanImage,NoiseImage,baselineImage,date):
     axs[11].imshow(np.abs(np.fft.ifftshift(np.fft.ifft2(baselineImage[:,:,9]))))
     axs[11].set_title('Baseline K Space sample 2')
     plt.axis('off')
-    #plt.savefig("E:/JiaxingData/ActiveNoiseSensingModel/ImgResults/'+date+'/object/IMG/sample.png")
+    plt.savefig('E:/JiaxingData/ActiveNoiseSensingModel/ImgResults/'+date+'/object/IMG/sample.png')
     plt.show()
+
+# store the corrected k space signal into a copy of the original h5py file in the same folder
+# Inputs: 
+#       fPath: Folder path that contains the targeting file 
+#       fName: the file name without postfix
+#       corrected: the corrected data to be stored
 
 def storePrediction(fPath, fName, corrected):
 
@@ -172,6 +190,12 @@ def storePrediction(fPath, fName, corrected):
         data[0:16] = corrected[i]                      # assign new values to data
     f1.close()
 
+# plot all slices of baseline, noisy, cleaned, and noise map image
+# Inputs: 
+#       BaselineImage:
+#       NoiseImage
+#       CleanImage
+#       NoiseMap: date of recording of the given data
 def plotAll(BaselineImage,NoiseImage,CleanImage,NoiseMap):
     max= np.max(BaselineImage)/1
     min=np.min(BaselineImage)

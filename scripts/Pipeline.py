@@ -41,11 +41,7 @@ model = m.get_model(N)
 LRC = tt.learningRateUpdate()
 
 # early stopping callback, stop the training if the validation loss stop redcuing
-ESC = tf.keras.callbacks.EarlyStopping(
-    monitor='val_loss',   # Metric to be monitored
-    patience=5,           # Number of epochs to wait for improvement
-    restore_best_weights=True # Restore model weights from the epoch with the best value of the monitored metric
-)
+ESC = tt.earlyStopUpdate
 model.summary()
 model.compile(optimizer=Adam(learning_rate = lr), loss = "mse",metrics = [RootMeanSquaredError()])
 history = model.fit(noiseTrain, sigTrain, epochs = epoch_num, 
@@ -74,22 +70,11 @@ print("Mean square Error on sample Image:", mse)
 #sampleCorrected[subLength:length] = corrected
 
 # Convert data into 3D k-space and image space !!!Change File Paths !!!
-NoiseMap = common.toImg(common.toKSpace(tt.ConvergeComplexR(predicted),noise))
-CleanImg = common.toImg(common.toKSpace(corrected,noise))
-NoisyImg = common.toImg(common.toKSpace(sampleMRI,noise))
-BaselineImg = common.toImg(common.toKSpace(baseline,baseline))
+NoiseMap = dp.toImg(dp.toKSpace(tt.ConvergeComplexR(predicted),noise))
+CleanImg = dp.toImg(dp.toKSpace(corrected,noise))
+NoisyImg = dp.toImg(dp.toKSpace(sampleMRI,noise))
+BaselineImg = dp.toImg(dp.toKSpace(baseline,baseline))
 
-max= np.max(BaselineImg)/2
-min=np.min(BaselineImg)
-common.PlotSlices(BaselineImg,min,max)
-max= np.max(NoisyImg)/2
-min=np.min(NoisyImg)
-common.PlotSlices(NoisyImg,min,max)
-max= np.max(CleanImg)/2
-min=np.min(CleanImg)
-common.PlotSlices(CleanImg,min,max)
-max= np.max(NoiseMap)/5
-min=np.min(NoiseMap)
-common.PlotSlices(NoiseMap,min,max)
+tt.plotAll(BaselineImg,NoisyImg,CleanImg,NoiseMap)
 tt.plotSamples(CleanImg,NoisyImg,BaselineImg,date)
 tt.plotFFTComparsion(corrected,sampleMRI,baseline,date)
