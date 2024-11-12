@@ -1,9 +1,17 @@
-DataProcessing: Store h5py file into training dataset locally as npy files (vectorization is done here)
-TrainModel: Read the data files and start training
-SampleTest:Test the model on the test data
+common: common MRI H5PY reading and editing function library
+TrainAndTest: Model training, tesing and fig plotting function library
+scriptsHistory: old and retired function bank
+DataProcessing: Store h5py file into training dataset locally as npy files (vectorization is done here) / common data processing function bank in addition to 'common'
+pipeline: the general pipeline for data extracting from h5py, model training, and testing
+RawScripts: funcion and logic testing space
+spectrumAnalysis: Quick spectrum analysis of the data
+
+
+
+### Elder ones which are no longer used in the pipeline ###
+TrainModel_reshape: Read the data files and start training
+SampleTest_Reshape:Test the model on the test data
 RawScripts: function/code testing
-SampleTest 2-1: test the 2 noise channel map to 1 MRI channel model
-trainModel3D: Read data files and train the 3d K space model
 SampleTest3D: test the 3d k space model
 TM_HP: a long run for optimal hyper parameter searching
 spectrumAnalysis: Quick spectrum analysis of the data
