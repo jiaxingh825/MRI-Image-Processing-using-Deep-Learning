@@ -1,14 +1,9 @@
-import glob
-import h5py
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import pickle as pk 
 import tensorflow as tf
-import function_Bnak
-from patchify import patchify, unpatchify
 
-# Each block contains n 2D convolution layers
+
+# each DB consists of 8 convolutional layers, each producing 16 feature maps
+# so each DB produces 128 feature maps total
+# layers receive output of all preceding layers as input 
 # Inputs: 
 #       x: the output from the previous block for skip connections
 #       num_layers: number of convolution layers in the dense block
