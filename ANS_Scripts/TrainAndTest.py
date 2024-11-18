@@ -58,36 +58,6 @@ def plotHist(name, hist,date,modelName):
     plt.show()
 
 
-# Reverse the process of 'dataProcessing.splitComplex'
-# Reconstruct the data by put the coressponding imaginary part next to the real part
-# Inputs: 
-#       data: data that is processed by 'splitComplex' with shape (number of samples, 2*number of channels, number of data points)
-# Outputs:
-#        newData: Re-arranged data
-def ConvergeComplex(data):
-    numPoints = int(data.shape[2])
-    numChannels = int(data.shape[1])
-    newData = np.zeros((data.shape[0],numChannels//2,numPoints),dtype=np.complex64)
-    for i in range(0,(numChannels//2)):
-        for k in range(0,numPoints):
-            newData[:,i,k] = data[:,2*i,k]+data[:,2*i+1,k]*1j
-    return newData
-
-# Reverse the process of 'dataProcessing.splitComplexR'
-# Reconstruct the data by put the coressponding imaginary part next to the real part
-# Inputs: 
-#       data: data that is processed by 'splitComplexR' with shape (number of samples, 2, number of channels, number of data points)
-# Outputs:
-#        newData: Re-arranged data
-def ConvergeComplexR(data):
-    numPoints = int(data.shape[2])
-    numChannels = int(data.shape[3])
-    newData = np.zeros((data.shape[0],numPoints,numChannels),dtype=np.complex64)
-    for k in range(0,numPoints):
-        for i in range(numChannels):
-            newData[:,k,i] = data[:,0,k,i]+data[:,1,k,i]*1j
-    return np.transpose(newData,(0,2,1))
-
 # Return the max-min normalization of the data
 # Inputs: 
 #       data

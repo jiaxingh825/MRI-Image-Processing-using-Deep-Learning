@@ -38,45 +38,41 @@ def transferFlattenSingle(noiseSignal, MRISignal):
     transfer = np.dot(mri,np.linalg.pinv(noise))
     return transfer
 
-noise = 'C:/Active_Noise_Sensing/EMINoise/0827/NoiseSignal_32_256.h5'
-img = 'C:/Active_Noise_Sensing/EMINoise/0827/NoisyImg.h5'
-baseline = 'C:/Active_Noise_Sensing/EMINoise/0827/BaselineImg.h5'
+noise = 'C:/EMINoise/0827/NoiseSignal_32_256.h5'
+img = 'C:/EMINoise/0827/NoisyImg.h5'
+baseline = 'C:/EMINoise/0827/BaselineImg.h5'
 
 # Load Data
 # noise channel from noise only scans
 signal,b = common.readAllAcqs(noise)
-noiseSignal = signal[:,16:18,:]
+noiseSignal = dp.ConvergeComplexR(dp.SplitComplexR(signal[:,16:18,:]))
 
 # MRI channel from noise only scans
-MRISignal = signal[:,0:16,:]
-
-
+MRISignal = dp.ConvergeComplexR(dp.SplitComplexR(signal[:,0:16,:]))
 
 # Noise channel from  Noisy MRI scans
 noisyImg,b = common.readAllAcqs(img)
-imageNoise = noisyImg[:,16:18,:]
+print(noisyImg.shape)
+imageNoise = dp.ConvergeComplexR(dp.SplitComplexR(noisyImg[:,16:18,:]))
 # Noisy Image, image channel from MRI scans
-image = noisyImg[:,0:16,:]
+image = dp.ConvergeComplexR(dp.SplitComplexR(noisyImg[:,0:16,:]))
 # baseline Image
 baseline,b = common.readAllAcqs(baseline)
 baseline = baseline[:,0:16,:]
+baseline = dp.ConvergeComplexR(dp.SplitComplexR(baseline))
 #(16,2)*(2,512) = (16,512)
 # (16,512)*(512,2) = (16,2)
 
 noiseSignal1 = imageNoise
+print(noiseSignal1.shape)
 MRISignal1 = image-baseline
 
-noiseSignal2 = np.append(noiseSignal,noiseSignal1,axis = 0)
-MRISignal2 = np.append(MRISignal,MRISignal1,axis = 0)
 
-#transfer = transferFlatten(noiseSignal, MRISignal)
-print(noiseSignal1.shape)
 transfer1 = transferFlatten(noiseSignal1, MRISignal1)
-#transfer2 = transferFlatten(noiseSignal2, MRISignal2)
-#scale = transfer1/transfer2
-#print(scale)
 
-pred = np.zeros(image.shape)#,dtype= np.complex64)
+
+
+pred = np.zeros(image.shape,dtype= np.complex64)
 len = image.shape[0]
 for k in range(len):
     pred[k] = np.dot(transfer1,imageNoise[k])
@@ -85,13 +81,13 @@ cleaned = image - pred
 
 mse = np.mean(np.square(cleaned - baseline))
 print("Mean square Error on sample Image:", mse)
-
 BaselineImage = dp.toImg(dp.toKSpace(baseline,img))
 NoiseImage = dp.toImg(dp.toKSpace(image,img))
 CleanImage = dp.toImg(dp.toKSpace(cleaned,img))
 NoiseMap = dp.toImg(dp.toKSpace(pred,img))
 
-tt.storePrediction('C:/Active_Noise_Sensing/EMINoise/0827/','NoisyImg',cleaned)
+print(dp.complexRearrangement(cleaned).shape)
+tt.storePrediction('C:/EMINoise/0827/','NoisyImg',dp.complexRearrangement(cleaned))
 
 
 #tt.plotAll(BaselineImage,NoiseImage,CleanImage,NoiseMap)
