@@ -87,7 +87,8 @@ CleanImage = dp.toImg(dp.toKSpace(cleaned,img))
 NoiseMap = dp.toImg(dp.toKSpace(pred,img))
 
 print(dp.complexRearrangement(cleaned).shape)
-tt.storePrediction('C:/EMINoise/0827/','NoisyImg',dp.complexRearrangement(cleaned))
+tt.storePrediction('C:/EMINoise/0827/','NoisyImg',dp.complexRearrangement(image))
+tt.storePrediction18To16('C:/EMINoise/0827/', 'NoisyImg')
 
 
 #tt.plotAll(BaselineImage,NoiseImage,CleanImage,NoiseMap)

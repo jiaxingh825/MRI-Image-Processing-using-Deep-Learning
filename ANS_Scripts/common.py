@@ -37,6 +37,7 @@ def getDesc(fname, table_name="acq"):
 def recon(fname, table_name="acq", datasrc="data"):
     #Load in all the data
     allData,desc = readAllAcqs(fname, table_name, datasrc)
+    allData = allData[:,0:16,:]
     nSlices = int(desc["slice"].max()+1)
     ny = int(desc["phase"].max()+1)
     nx = allData.shape[2]

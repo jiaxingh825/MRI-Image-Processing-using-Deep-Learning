@@ -1,4 +1,5 @@
 import h5py
+import json
 import numpy as np
 import keras
 import tensorflow.keras.layers as tfl
@@ -148,7 +149,6 @@ def plotSamples(CleanImage,NoiseImage,baselineImage,date):
 #       corrected: the corrected data to be stored
 
 def storePrediction(fPath, fName, corrected):
-
     # use the shutil.copyobj() method to copy the contents of source_file to destination_file
     shutil.copy((fPath+fName+'.h5'), fPath+fName+'New.h5')
     f1 = h5py.File(fPath+fName+'New.h5', 'r+')     # open the file
@@ -157,7 +157,11 @@ def storePrediction(fPath, fName, corrected):
     for i, row in desc.iterrows():
         data_string = "{:016x}".format(int(row.uid))
         data = f1['data'][volGroup[0]][data_string]       # load the data
+        #del f1['data'][volGroup[0]][data_string]
+        
         data[0:16] = corrected[i]                      # assign new values to data
+        #path = 'data/'+volGroup[0]+'/'+data_string
+        #f1.create_dataset(path, data=corrected[i])
     f1.close()
 
 # plot all slices of baseline, noisy, cleaned, and noise map image
@@ -170,12 +174,136 @@ def plotAll(BaselineImage,NoiseImage,CleanImage,NoiseMap):
     max= np.max(BaselineImage)/1
     min=np.min(BaselineImage)
     common.PlotSlices(BaselineImage,min,max)
-    max= np.max(NoiseImage)/5000
+    max= np.max(NoiseImage)/500
     min=np.min(NoiseImage)
     common.PlotSlices(NoiseImage,min,max)
-    max= np.max(CleanImage)/1
+    max= np.max(CleanImage)/1000
     min=np.min(CleanImage)
     common.PlotSlices(CleanImage,min,max)
     max= np.max(NoiseMap)/500
     min=np.min(NoiseMap)
     common.PlotSlices(NoiseMap,min,max)
+
+def storePrediction18To16(fPath, fName):
+    # open the files
+    subset_channels = np.arange(2,18)
+    fs = h5py.File(fPath+fName+'New.h5', 'r')
+    fd = h5py.File(fPath+fName+'New16.h5','w')
+    # copy and change some root attributes
+    subset_inds = CopyRootAttributes(fs,fd,subset_channels)
+    # copy groups we don't need to change
+    fs.copy('metaData',fd)
+    fs.copy('status',fd)
+    fs.copy('store',fd)
+    # copy specific groups to change
+    CopyHeaderSummary(fs,fd,subset_inds)
+    CopyDataGroup(fs,fd,subset_inds)
+    CopyDataGroup(fs,fd,subset_inds,"rawData")
+    # close the files
+    fs.close()
+    fd.close()
+
+
+def LoadParameters(f):
+    g = f['/']
+    pstr = g.attrs['Parameters']
+    pmap = json.loads(pstr)
+    return pmap
+
+def ConvertStringToIntList(stringList):
+    # get rid of enclosing brackets
+    tempVal = stringList[1:-1]
+    # break up based on comma
+    tempVal = tempVal.split(',')
+    outVal = []
+    for s in tempVal:
+        outVal.append(int(s))
+    return outVal
+
+def ConvertIntListToString(intList):
+    outStr = "["
+    for s in intList:
+        outStr = outStr + str(s) + ","
+    # remove last comma, add on end bracket
+    outStr = outStr[:-1] + "]"
+    return outStr
+
+def UpdateParameters(pmap,channelSubset):
+    # get the channels from the pmap, 
+    # check that subset is actually a subset
+    ch_int = ConvertStringToIntList(pmap['ActiveChannels'])
+    ch_gain = ConvertStringToIntList(pmap['ActiveChannelsGain'])
+    
+    # now check all substrings and make sure in the list, 
+    # get the index
+    subsetInds = []
+    for s in channelSubset:
+        foundVal = False
+        for i,v in enumerate(ch_int):
+            if s==v:
+                subsetInds.append(i)
+                foundVal = True
+                break
+        
+        assert foundVal, "subset channel "+str(s)+" is not in the active channels list"
+    # make a subset gain based on the subset indices
+    subsetGain = [ch_gain[i] for i in subsetInds]
+    # convert channel subset and gain subset to strings
+    ch_ss_str = ConvertIntListToString(channelSubset)
+    g_ss_str = ConvertIntListToString(subsetGain)
+    # put back into json
+    pmap['ActiveChannels'] = ch_ss_str
+    pmap['ActiveChannelsGain'] = g_ss_str
+    return subsetInds
+
+def CopyRootAttributes(fsource,fdest,subset_channels):
+    pmap = LoadParameters(fsource)
+    subset_inds = UpdateParameters(pmap,subset_channels)
+    fdest.attrs.create("Parameters",json.dumps(pmap))
+    rootAtts = ["DataManagerRunId","DataManagerRunIdInHex"]
+    for attName in rootAtts:    
+        fdest.attrs.create(attName,fsource.attrs[attName])
+    return subset_inds
+
+def CopyHeaderSummary(fsource,fdest,subset_inds):
+    gName = "headerSummary"
+    # create headerSummary group
+    fdest.create_group(gName)
+    # get the list of sub groups from the previous file
+    hs_subgroups = fsource[gName].keys()
+    attNames = ["channelIndices","max","min"]
+    for subgroup in hs_subgroups:
+        gs = fsource[gName+"/"+subgroup]
+        g = fdest[gName].create_group(subgroup)
+        gs.copy("timestamp",g)
+        # get the peak table, we need to subselect
+        peakTable = gs["peakTable"]
+        print(peakTable.shape)
+        # create the peak table
+        g.create_dataset("peakTable",data=peakTable[:,subset_inds])
+        # copy the peak table attributes
+        for attName in attNames:
+            temp = peakTable.attrs[attName]
+            g["peakTable"].attrs.create(attName,temp[subset_inds])
+        
+def CopyDataGroup(fsource,fdest,subset_inds,groupName="data"):
+    attAllNames = ["acquisitionId","runId","temporalIndex","timestamp"]
+    attSubsetNames = ["adcPeakValues","channelIndices"]
+    fdest.create_group(groupName)
+    subgroups = fsource[groupName].keys()
+    for subgroup in subgroups:
+        sg_s = fsource[groupName][subgroup]
+        sg = fdest[groupName].create_group(subgroup)
+        dsets = sg_s.keys()
+        for dset in dsets:
+            dset_s = sg_s[dset]
+            # for now we just copy the subset of data
+            data_clean = dset_s[subset_inds,:]
+
+            sg.create_dataset(dset,data=data_clean)
+            for attName in attSubsetNames:
+                temp = dset_s.attrs[attName]
+                sg[dset].attrs.create(attName,temp[subset_inds])
+            for attName in attAllNames:
+                temp = dset_s.attrs[attName]
+                sg[dset].attrs.create(attName,temp)
