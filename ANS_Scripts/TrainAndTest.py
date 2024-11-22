@@ -147,7 +147,6 @@ def plotSamples(CleanImage,NoiseImage,baselineImage,date):
 #       fPath: Folder path that contains the targeting file 
 #       fName: the file name without postfix
 #       corrected: the corrected data to be stored
-
 def storePrediction(fPath, fName, corrected):
     # use the shutil.copyobj() method to copy the contents of source_file to destination_file
     shutil.copy((fPath+fName+'.h5'), fPath+fName+'New.h5')
@@ -177,13 +176,18 @@ def plotAll(BaselineImage,NoiseImage,CleanImage,NoiseMap):
     max= np.max(NoiseImage)/500
     min=np.min(NoiseImage)
     common.PlotSlices(NoiseImage,min,max)
-    max= np.max(CleanImage)/1000
+    max= np.max(CleanImage)/70
     min=np.min(CleanImage)
     common.PlotSlices(CleanImage,min,max)
     max= np.max(NoiseMap)/500
     min=np.min(NoiseMap)
     common.PlotSlices(NoiseMap,min,max)
 
+# make a copy of the original h5py file in the same folder
+# excluding the extra noise channels and updating parameter, attributes, etc.
+# Inputs: 
+#       fPath: Folder path that contains the targeting file 
+#       fName: the file name without postfix
 def storePrediction18To16(fPath, fName):
     # open the files
     subset_channels = np.arange(2,18)
