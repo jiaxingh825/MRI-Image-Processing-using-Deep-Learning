@@ -2,31 +2,39 @@ import numpy as np
 import matplotlib.pyplot as plt
 import h5py
 import common
+import DataProcessing as dp
 
-def readSignal(fileName):
-    f = h5py.File(fileName)
-    volGroup = list(f["data"].keys())
-    sigList = list(f["data"][volGroup[0]].keys())
-    count = len(sigList)
-    sig = np.empty((count,16,12800))
-    noise = np.empty((count,2,12800))
-    sigDic = {}
-    for i in range(0, count-1):
-        sig[i] = np.array(f["data"][volGroup[0]][sigList[i]])[:16,]
-        sigDic[sigList[i]] = np.array(f["data"][volGroup[0]][sigList[i]])
-        noise[i] = np.array(f["data"][volGroup[0]][sigList[i]])[-2:,]
-    return sig,noise,sigDic
-sqWave = 'C:/Users/Admin/Desktop/JiaxingData/sampleData_June4_2024/DataCapture_10kHzSqWave_n30dB_TR320_acq100_rep300.h5'
-baseline = 'C:/Users/Admin/Desktop/JiaxingData/sampleData_June4_2024/DataCapture_Baseline_TR20_acq5_rep6000.h5'
-sig2,noise2,sigDic2 = readSignal(sqWave)
+date = '0816'
+noiseOnly,b = common.readAllAcqs('E:/JiaxingData/EMINoise/0816/NoiseSignal.h5')
+noiseOnly = dp.ConvergeComplexR(dp.SplitComplexR(noiseOnly))
+noiseImage,b = common.readAllAcqs('E:/JiaxingData/EMINoise/0816/NoiseImage.h5')
+noiseImage = dp.ConvergeComplexR(dp.SplitComplexR(noiseImage))
+baseline,b = common.readAllAcqs('E:/JiaxingData/EMINoise/0816/BaselineImage.h5')
+baseline = dp.ConvergeComplexR(dp.SplitComplexR(baseline))
 
-signal = sig2[250,0,:]
-fft = np.fft.fft(signal)
-ps = 20*np.log10(np.abs(fft)**2)
+i1 = 0
+i2 = 17
 
-sampling_frequency = common.getRate(sqWave)
-freqs = np.fft.fftfreq(len(signal),1/sampling_frequency)
+noiseOnly = noiseOnly[i1,i2]
+noise = noiseImage[i1,i2]
+noiseImage = noiseImage[i1,i2] - baseline[i1,i2]
+print(noiseOnly.shape)
+print(noiseImage.shape)
 
-plt.plot(freqs[:len(freqs)//2], ps[:len(freqs)//2])
+
+fft1 = np.fft.fft(noiseOnly)
+fft2 = np.fft.fft(noise)
+ps1 = 20*np.log10(np.abs(fft1)**2)
+ps2 = 20*np.log10(np.abs(fft2)**2)
+
+sampling_frequency1 = common.getRate('E:/JiaxingData/EMINoise/0816/NoiseSignal.h5')
+sampling_frequency2 = common.getRate('E:/JiaxingData/EMINoise/0816/NoiseImage.h5')
+freqs1 = np.fft.fftfreq(len(noiseOnly),1/sampling_frequency1)
+freqs2 = np.fft.fftfreq(len(noiseOnly),1/sampling_frequency2)
+
+plt.plot(freqs1[:len(freqs1)//2],np.abs(fft1)[:len(freqs1)//2])
+plt.plot(freqs2[:len(freqs2)//2],np.abs(fft2)[:len(freqs2)//2])
+plt.legend(['noise only','noise map'])
+plt.savefig('C:/Users/Admin/Desktop/signalExamination/'+date+'/abs(fft)_'+str(i1)+'_'+str(i2)+'.png')
 #plt.plot(freqs[:len(freqs)//2],np.abs(fft)[:len(freqs)//2])
 plt.show()
