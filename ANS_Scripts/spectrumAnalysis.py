@@ -87,7 +87,7 @@ def plotAllSamples(noiseImage,flip0,noisePre,noisePre0,date,mode,type,trial):
         #plt.show()
 
 
-
+# frequency band range: 0-5000 5000-20000 20000-32000
 date = '1209'
 for mode in ['AM']:
     for type in ['Square','Sine']:
