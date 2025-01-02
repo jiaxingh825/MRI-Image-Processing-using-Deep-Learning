@@ -9,8 +9,9 @@ import DataProcessing as dp
 import common
 import TrainAndTest as tt
 
-noisePre,b = common.readAllAcqs('E:/JiaxingData/EMINoise/0827/NoisyImg.h5',table_name="noise")
-print(noisePre.shape)
-noisePre = dp.ConvergeComplexR(dp.SplitComplexR(noisePre))
-print(noisePre.shape)
+noise = np.squeeze(common.recon('E:/JiaxingData/EMINoise/1209/AMSineFA77_3.h5'))
+print(noise.shape)
+max= np.max(noise)/12000
+min=np.min(noise)
+common.PlotSlices(noise,min,max)
 
