@@ -10,7 +10,7 @@ from prettytable import PrettyTable
 def plotAcqSamples(noiseImage,flip0,noisePre,noisePre0,date,mode,type,trial):
     
     i1 = np.random.randint(0,len(noiseImage))
-    i2 = np.random.randint(16,18)
+    i2 = np.random.randint(0,16)
     
     #noiseOnly = noiseOnly[i1,i2]
     noise = noiseImage[i1,i2]
@@ -43,7 +43,7 @@ def plotAcqSamples(noiseImage,flip0,noisePre,noisePre0,date,mode,type,trial):
     plt.plot(freqs3[:len(freqs3)//2],np.abs(fft3)[:len(freqs3)//2])
     plt.plot(freqs2[:len(freqs4)//2],np.abs(fft4)[:len(freqs2)//2])
     plt.plot(freqs3[:len(freqs3)//2],np.abs(fft5)[:len(freqs3)//2])
-    #plt.xlim(9000, 11000)
+    plt.xlim(9000, 11000)
     plt.grid()
     plt.legend(['noise map','flip Angle 0','regular noise preScan', '0FlipAngle noise preScan'])
     #plt.savefig('E:/JiaxingData/EMINoise/'+date+'/spectrumPlot/'+mode+type+trial+'_absFFT_'+str(i1)+'_'+str(i2)+'.png')
@@ -113,83 +113,29 @@ def PCCCalculation(sig1,sig2):
               
 
 
-# Separate the  fourier transform of the signal into different frequency ranges
-# Inputs: 
-#       sig: the given signal to separate the frequency ranges
-#       fd: file directory to extract the sampling frequency 
-#       bands: an array which contains lower and upper bounds of different bands
-# Outputs:
-#       decomposed_bands: the fourier transform of the signal in different bands
-def frequencyBandDivision(sig, fd, bands):
-    fft = np.abs(np.fft.fft(sig))
-    sampling_frequency = common.getRate(fd)
-    freqs = np.fft.fftfreq(len(sig),1/sampling_frequency)
-    band_mask1 = (freqs >= bands[0,0]) & (freqs < bands[0,1])
-    fft1 = fft * band_mask1
-    band_mask2 = (freqs >= bands[1,0]) & (freqs < bands[1,1])
-    fft2 = fft * band_mask2
-    band_mask3 = (freqs >= bands[2,0]) & (freqs < bands[2,1])
-    fft3 = fft * band_mask3
-    return fft1,fft2,fft3
-
-def TFCalculation(sig,fd,bands,channel=18):
-    fft1 = []
-    fft2 = []
-    fft3 = []
-    for i in range(0,18):
-        fft1_temp,fft2_temp,fft3_temp = frequencyBandDivision(sig,fd,bands)
-        fft1.append(fft1_temp)
-        fft2.append(fft2_temp)
-        fft3.append(fft3_temp)
-    MRISignal1 = fft1[0:16]
-    MRISignal2 = fft2[0:16]
-    MRISignal3 = fft3[0:16]
+def TFCalculation2(sig,channel=18):
+    MRISignal = sig[0:16]
     if channel == 18:
-        EMISignal1 = fft1[16:18]
-        EMISignal2 = fft2[16:18]
-        EMISignal3 = fft3[16:18]
+        EMISignal = sig[16:18]
+        tf = np.zeros((16,2),dtype= np.complex64)
+        tf = np.dot(MRISignal,np.linalg.pinv(EMISignal))
     else:
-        EMISignal1 = fft1[channel]
-        EMISignal2 = fft2[channel]
-        EMISignal3 = fft3[channel]
-    tf1 = np.zeros((16,2),dtype= np.complex64)
-    tf1 = np.dot(MRISignal1,np.linalg.pinv(EMISignal1))
-    tf2 = np.zeros((16,2),dtype= np.complex64)
-    tf2 = np.dot(MRISignal2,np.linalg.pinv(EMISignal2))
-    tf3 = np.zeros((16,2),dtype= np.complex64)
-    tf3 = np.dot(MRISignal3,np.linalg.pinv(EMISignal3))
-    return tf1,tf2,tf3
+        EMISignal = sig[channel]
+        tf = np.zeros((16,1),dtype= np.complex64)
+        tf = np.dot(MRISignal,np.linalg.pinv(EMISignal.reshape(1,len(EMISignal))))
+    return tf
 
-
-def denoising(sig,fd,bands,channel):
-    tf1,tf2,tf3 = TFCalculation(sig[0],fd,bands,channel)
-
-    fft1 = []
-    fft2 = []
-    fft3 = []
-    for i in range(0,18):
-        fft1_temp,fft2_temp,fft3_temp = frequencyBandDivision(sig[128],fd,bands)
-        fft1.append(fft1_temp)
-        fft2.append(fft2_temp)
-        fft3.append(fft3_temp)
-    MRISignal1 = fft1[0:16]
-    MRISignal2 = fft2[0:16]
-    MRISignal3 = fft3[0:16]
-    if channel == 18:
-        EMISignal1 = fft1[16:18]
-        EMISignal2 = fft2[16:18]
-        EMISignal3 = fft3[16:18]
+def denoising2(sig,channel1,channel2=18):
+    tf = TFCalculation2(sig[0], channel2)
+    denoised = sig[channel1,0:16]
+    if channel2 == 18:
+        EMISignal = sig[channel1,16:18]
+        pred = np.dot(tf,EMISignal)
+        denoised = denoised - pred
     else:
-        EMISignal1 = fft1[channel]
-        EMISignal2 = fft2[channel]
-        EMISignal3 = fft3[channel]
-    denoised = sig[128,0:16]
-
-    pred1 = np.dot(EMISignal1,tf1)
-    pred2 = np.dot(EMISignal2,tf2)
-    pred3 = np.dot(EMISignal3,tf3)
-    pred = np.concatenate((pred1,pred2,pred3),axis=1)
-    denoised = denoised - np.fft.ifft(pred)
+        EMISignal = sig[128,channel2]
+        pred = np.dot(tf,EMISignal.reshape(1,512))
+        denoised = denoised - pred
     return denoised
 
 def mean(sig):
@@ -229,9 +175,9 @@ def experiment1DTable(before,sup16,sup17,supComb):
     SRPeakSupComb = 1 - (peakSupComb/peakBefore)
     SRStdSupComb = 1 - (stdSupComb/stdBefore)
     table = PrettyTable(["","Before suppression", "After suppression with Channel 16",
-                          "Suppression Rate", "After suppression with Channel 17",
-                          "Suppression Rate","After suppression with Channel 16 and 17",
-                          "Suppression Rate"])
+                          "Suppression Rate1", "After suppression with Channel 17",
+                          "Suppression Rate2","After suppression with Channel 16 and 17",
+                          "Suppression Rate3"])
     table.add_row(["mean",meanBefore,meanSup16,SRMeanSup16,meanSup17,SRMeanSup17,meanSupComb,SRMeanSupComb]) 
     table.add_row(["peak",peakBefore,peakSup16,SRPeakSup16,peakSup17,SRPeakSup17,peakSupComb,SRPeakSupComb]) 
     table.add_row(["standard deviation",stdBefore,stdSup16,SRStdSup16,stdSup17,SRStdSup17,stdSupComb,SRStdSupComb]) 
@@ -241,73 +187,83 @@ def experiment1DTable(before,sup16,sup17,supComb):
 # step 1: calculate the pcc of channel 0-15 to 16 and 17
 # step 2: calculate transfer factor with frequency band division
 # step 3: experiment 1D
-def experiment1D(sig,fd):
-    # step 1
+def experiment1D(sig):
+    # step1
     real_corr = []
     imag_corr = []
     for i in range(0,16):
         for k in range(16,18):
-            real_corr_temp,imag_corr_temp = PCCCalculation(sig[i],sig[k])
+            real_corr_temp,imag_corr_temp = PCCCalculation(sig[:,i],sig[:,k])
             real_corr.append(real_corr_temp)
             imag_corr.append(imag_corr_temp)
     mean_real_corr = np.mean(real_corr,axis=0)
-    mean_imag_corr = np.mean(imag_corr,axis=0)
+    mean_real_corr = np.mean(np.abs(real_corr))
+    mean_imag_corr = np.mean(np.abs(imag_corr))
     print(mean_real_corr)
     print(mean_imag_corr)
+
     count_strong_real_corr = []
     count_strong_imag_corr = []
 
     for i in range(0,32):
         strong_real_corr = (real_corr[i] > 0.8)
         strong_imag_corr = (imag_corr[i] > 0.8)
-        count_strong_real_corr.append(len(strong_real_corr))
-        count_strong_imag_corr.append(len(strong_imag_corr))
-    
+        count_strong_real_corr.append(strong_real_corr.sum())
+        count_strong_imag_corr.append(strong_imag_corr.sum())
     print(count_strong_real_corr)
     print(count_strong_imag_corr)
+    
+    real_corr = np.array(np.abs(real_corr))
+    real_corr[real_corr >= 0.8] += 1
     #heat plot
-    plt.imshow(real_corr, cmap='viridis', aspect='auto')
+    plt.figure(figsize=(25,5))
+    plt.imshow(real_corr,aspect='auto',cmap='viridis_r',interpolation='none')
     plt.colorbar(label='Intensity')  # Add a color bar
     plt.title("Real part Correlation Heat Map")
     plt.xlabel("X-axis")
     plt.ylabel("Y-axis")
+    plt.yticks(range(0, 32, 1))
     plt.show()
-
-    plt.imshow(imag_corr, cmap='viridis', aspect='auto')
+    
+    imag_corr = np.array(np.abs(imag_corr))
+    imag_corr[imag_corr >= 0.8] += 1
+    plt.figure(figsize=(25,5))
+    plt.imshow(imag_corr,aspect='auto',cmap='viridis_r',interpolation='none')
     plt.colorbar(label='Intensity')  # Add a color bar
     plt.title("Imagery part Correlation Heat Map")
     plt.xlabel("X-axis")
     plt.ylabel("Y-axis")
-    plt.show()
+    plt.yticks(range(0, 32, 1))
+    plt.show() 
 
-    # step 2
-    bands = {[0,5000],[5000,15000],[15000,32000]}
-    for i in range(16,18):
-        if i == 16:
-            sup16 = denoising(sig,fd,bands,i)
-        else:
-            sup17 = denoising(sig,fd,bands,i)
-    
-    supcomb = denoising(sig,fd,bands,18)
-    experiment1DTable(sig[128,0:16],sup16,sup17,supcomb)
+    # step2
+    channel1 = 128
+    sup16 = denoising2(sig,channel1,16)
+    sup17 = denoising2(sig,channel1,17)
+    supcomb = denoising2(sig,channel1,18)
+    # step3
+    experiment1DTable(np.abs(sig[channel1,0:16]),np.abs(sup16),np.abs(sup17),np.abs(supcomb))
 
 # frequency band range: 0-5000 5000-20000 20000-32000
+#imag_FA0SineRun1
+#real_FA0SineRun1
 date = '1209'
 for mode in ['AM']:
     for type in ['Square','Sine']:
         for trial in ['1','2','3','4','5']:
             #noiseOnly,b = common.readAllAcqs('E:/JiaxingData/EMINoise/1205/FA0Run1.h5')
             #noiseOnly = dp.ConvergeComplexR(dp.SplitComplexR(noiseOnly))
-            noiseImage,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA77_'+trial+'.h5')
-            noiseImage = dp.ConvergeComplexR(dp.SplitComplexR(noiseImage))
+            #noiseImage,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA77_'+trial+'.h5')
+            #noiseImage = dp.ConvergeComplexR(dp.SplitComplexR(noiseImage))
             #baseline,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/FA77Baseline.h5')
             #baseline = dp.ConvergeComplexR(dp.SplitComplexR(baseline))
             flip0,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA0_'+trial+'.h5')
             flip0 = dp.ConvergeComplexR(dp.SplitComplexR(flip0))
-            noisePre,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA77_'+trial+'.h5',table_name="noise")
-            noisePre = dp.ConvergeComplexR(dp.SplitComplexR(noisePre))
-            noisePre0,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA0_'+trial+'.h5',table_name="noise")
-            noisePre0 = dp.ConvergeComplexR(dp.SplitComplexR(noisePre0))
+            #noisePre,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA77_'+trial+'.h5',table_name="noise")
+            #noisePre = dp.ConvergeComplexR(dp.SplitComplexR(noisePre))
+            #noisePre0,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA0_'+trial+'.h5',table_name="noise")
+            #noisePre0 = dp.ConvergeComplexR(dp.SplitComplexR(noisePre0))
             
-            plotAcqSamples(noiseImage,flip0,noisePre,noisePre0,date,mode,type,trial)
+            #plotAcqSamples(noiseImage,flip0,noisePre,noisePre0,date,mode,type,trial)
+            experiment1D(flip0)
 
