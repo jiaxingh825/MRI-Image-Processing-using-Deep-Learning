@@ -133,7 +133,7 @@ def denoising2(sig,channel1,channel2=18):
         pred = np.dot(tf,EMISignal)
         denoised = denoised - pred
     else:
-        EMISignal = sig[128,channel2]
+        EMISignal = sig[channel1,channel2]
         pred = np.dot(tf,EMISignal.reshape(1,512))
         denoised = denoised - pred
     return denoised
