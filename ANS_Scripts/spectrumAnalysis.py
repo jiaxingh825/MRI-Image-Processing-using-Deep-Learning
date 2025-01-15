@@ -127,6 +127,7 @@ def TFCalculation2(sig,channel=18):
 
 def denoising2(sig,channel1,channel2=18):
     tf = TFCalculation2(sig[0], channel2)
+    print(tf)
     denoised = sig[channel1,0:16]
     if channel2 == 18:
         EMISignal = sig[channel1,16:18]
@@ -188,53 +189,6 @@ def experiment1DTable(before,sup16,sup17,supComb):
 # step 2: calculate transfer factor with frequency band division
 # step 3: experiment 1D
 def experiment1D(sig):
-    # step1
-    real_corr = []
-    imag_corr = []
-    for i in range(0,16):
-        for k in range(16,18):
-            real_corr_temp,imag_corr_temp = PCCCalculation(sig[:,i],sig[:,k])
-            real_corr.append(real_corr_temp)
-            imag_corr.append(imag_corr_temp)
-    mean_real_corr = np.mean(real_corr,axis=0)
-    mean_real_corr = np.mean(np.abs(real_corr))
-    mean_imag_corr = np.mean(np.abs(imag_corr))
-    print(mean_real_corr)
-    print(mean_imag_corr)
-
-    count_strong_real_corr = []
-    count_strong_imag_corr = []
-
-    for i in range(0,32):
-        strong_real_corr = (real_corr[i] > 0.8)
-        strong_imag_corr = (imag_corr[i] > 0.8)
-        count_strong_real_corr.append(strong_real_corr.sum())
-        count_strong_imag_corr.append(strong_imag_corr.sum())
-    print(count_strong_real_corr)
-    print(count_strong_imag_corr)
-    
-    real_corr = np.array(np.abs(real_corr))
-    real_corr[real_corr >= 0.8] += 1
-    #heat plot
-    plt.figure(figsize=(25,5))
-    plt.imshow(real_corr,aspect='auto',cmap='viridis_r',interpolation='none')
-    plt.colorbar(label='Intensity')  # Add a color bar
-    plt.title("Real part Correlation Heat Map")
-    plt.xlabel("X-axis")
-    plt.ylabel("Y-axis")
-    plt.yticks(range(0, 32, 1))
-    plt.show()
-    
-    imag_corr = np.array(np.abs(imag_corr))
-    imag_corr[imag_corr >= 0.8] += 1
-    plt.figure(figsize=(25,5))
-    plt.imshow(imag_corr,aspect='auto',cmap='viridis_r',interpolation='none')
-    plt.colorbar(label='Intensity')  # Add a color bar
-    plt.title("Imagery part Correlation Heat Map")
-    plt.xlabel("X-axis")
-    plt.ylabel("Y-axis")
-    plt.yticks(range(0, 32, 1))
-    plt.show() 
 
     # step2
     channel1 = 128
@@ -242,15 +196,15 @@ def experiment1D(sig):
     sup17 = denoising2(sig,channel1,17)
     supcomb = denoising2(sig,channel1,18)
     # step3
-    experiment1DTable(np.abs(sig[channel1,0:16]),np.abs(sup16),np.abs(sup17),np.abs(supcomb))
+    experiment1DTable(sig[channel1,0:16],sup16,sup17,supcomb)
 
 # frequency band range: 0-5000 5000-20000 20000-32000
 #imag_FA0SineRun1
 #real_FA0SineRun1
 date = '1209'
 for mode in ['AM']:
-    for type in ['Square','Sine']:
-        for trial in ['1','2','3','4','5']:
+    for type in ['Sine']:
+        for trial in ['1']:
             #noiseOnly,b = common.readAllAcqs('E:/JiaxingData/EMINoise/1205/FA0Run1.h5')
             #noiseOnly = dp.ConvergeComplexR(dp.SplitComplexR(noiseOnly))
             #noiseImage,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA77_'+trial+'.h5')
