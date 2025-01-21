@@ -127,7 +127,6 @@ def TFCalculation2(sig,channel=18):
 
 def denoising2(sig,channel1,channel2=18):
     tf = TFCalculation2(sig[0], channel2)
-    print(tf)
     denoised = sig[channel1,0:16]
     if channel2 == 18:
         EMISignal = sig[channel1,16:18]
@@ -203,15 +202,15 @@ def experiment1D(sig):
 #real_FA0SineRun1
 date = '1209'
 for mode in ['AM']:
-    for type in ['Sine']:
-        for trial in ['1']:
+    for type in ['Square']:
+        for trial in ['1','2','3','4','5']:
             #noiseOnly,b = common.readAllAcqs('E:/JiaxingData/EMINoise/1205/FA0Run1.h5')
             #noiseOnly = dp.ConvergeComplexR(dp.SplitComplexR(noiseOnly))
             #noiseImage,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA77_'+trial+'.h5')
             #noiseImage = dp.ConvergeComplexR(dp.SplitComplexR(noiseImage))
             #baseline,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/FA77Baseline.h5')
             #baseline = dp.ConvergeComplexR(dp.SplitComplexR(baseline))
-            flip0,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA0_'+trial+'.h5')
+            flip0,b = common.readAllAcqs('C:/JiaxingData/EMINoise/'+date+'/0115/'+mode+type+'FA0_'+trial+'.h5')
             flip0 = dp.ConvergeComplexR(dp.SplitComplexR(flip0))
             #noisePre,b = common.readAllAcqs('E:/JiaxingData/EMINoise/'+date+'/'+mode+type+'FA77_'+trial+'.h5',table_name="noise")
             #noisePre = dp.ConvergeComplexR(dp.SplitComplexR(noisePre))
