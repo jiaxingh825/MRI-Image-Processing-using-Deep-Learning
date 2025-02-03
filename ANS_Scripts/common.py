@@ -93,6 +93,7 @@ def getMeasurementStartTimes(fname, table_name="acq"):
 def getKspace(fname):
     #Load in all the data
     allData,desc = readAllAcqs(fname)
+    allData = allData.view(np.complex64)
     nSlices = int(desc["slice"].max()+1)
     ny = int(desc["phase"].max()+1)
     nx = allData.shape[2]
@@ -106,6 +107,7 @@ def getKspace(fname):
         for ind in sliceDesc.index:
             phaseIndex = int(sliceDesc['phase'][ind])
             kSpace[:,phaseIndex,sliceIndex,:]=np.transpose(allData[ind,:,:],[1,0])
+    kSpace = np.sum(np.power(np.abs(kSpace),2),axis=kSpace.ndim-1)
     return kSpace
 
 def getDataDescriptions(fh, table_name="acq"):
