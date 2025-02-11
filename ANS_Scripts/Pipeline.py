@@ -40,11 +40,17 @@ lr = 0.0002
 N = noiseTrain.shape[2]
 model = m.get_model(N)
 
+def lrDeacy(epoch):
+    return lr*0.9**(epoch//4)
 # learning rate uodate callback
-LRC = tt.learningRateUpdate()
+LRC = tf.keras.callbacks.LearningRateScheduler(lrDeacy)
 
 # early stopping callback, stop the training if the validation loss stop redcuing
-ESC = tt.earlyStopUpdate
+ESC = tf.keras.callbacks.EarlyStopping(
+    monitor='val_loss',   # Metric to be monitored
+    patience=5,           # Number of epochs to wait for improvement
+    restore_best_weights=True # Restore model weights from the epoch with the best value of the monitored metric
+    )
 
 model.summary()
 model.compile(optimizer=Adam(learning_rate = lr), loss = "mse",metrics = [RootMeanSquaredError()])
