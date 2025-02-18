@@ -12,9 +12,6 @@ lr = 0.0002
 
 def get_model(N):
     input = tf.keras.Input(shape = (2,N,2))
-    x = tfl.Conv2D(128, (3,3), strides=1, padding='same')(input)
-    x = tfl.BatchNormalization()(x)
-    x = tfl.ReLU()(x)
     x = tfl.Conv2D(128, (11,11), strides=1, padding='same')(x)#kernel_regularizer=l2(0.01)xx
     x = tfl.BatchNormalization()(x)
     x = tfl.ReLU()(x)
@@ -23,7 +20,7 @@ def get_model(N):
     x = tfl.BatchNormalization()(x)
     x = tfl.ReLU()(x)
     #x = tfl.Dropout(0.2)(x)
-    x = tfl.Conv2D(32,(5,5),strides=1, padding = "same" )(x)
+    x = tfl.Conv2D(64,(5,5),strides=1, padding = "same" )(x)
     x = tfl.BatchNormalization()(x)
     x = tfl.ReLU()(x)
     #x = tfl.Dropout(0.2)(x)
