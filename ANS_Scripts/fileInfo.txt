@@ -6,6 +6,8 @@ pipeline: the general pipeline for data extracting from h5py, model training, an
 RawScripts: funcion and logic testing space
 spectrumAnalysis: Quick spectrum analysis of the data
 TrainModel: Model structure
+CodeTestingSandbox: juypter notebook used to play around with editor (transfer function) denosing method and result analysis
+ModelTestingSandbox: juypter notebook used to play around with Deep Learning denosing method and result analysis
 
 
 
